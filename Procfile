@@ -1,0 +1,1 @@
+web: scalajvm/target/universal/stage/bin/play-wisielec  -Dhttp.port=$PORT
