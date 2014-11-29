@@ -1,21 +1,5 @@
-#game {
-    width: 600px;
-}
-
 #game a {
     font-family: monospace;
-}
-
-#visible-word {
-    font-size: 40px;
-    font-family: monospace;
-}
-
-.letter-button {
-    width: 60px;
-    height: 40px;
-    font-weight: bold;
-    font-size: 22px;
-    margin: 2px;
-
+    font-size: 14px;
+    padding: 5px 9px;
 }

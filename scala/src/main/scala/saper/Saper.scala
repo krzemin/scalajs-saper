@@ -23,7 +23,9 @@ object Saper {
   case object Fail extends GameState
   case class Win(moves: Int) extends GameState
   
-  case class Board(config: GameConfig) {
+  case class Game(config: GameConfig) {
+
+    var initialized = false
 
     var board: Map[(Int, Int), Field] = Map.empty
 
@@ -36,18 +38,18 @@ object Saper {
 
     var moves: Int = 0
 
-    // init board with empty fields
-    (0 until config.width).foreach { x =>
-      (0 until config.height).foreach { y =>
-        board += (x, y) -> Empty
-      }
+    def reset(): Unit = {
+      clearFields()
+      initialized = false
+      moves = 0
+      state = GameInProgress
     }
 
-    // place mines
-    placeMines(config.mines)
-
+    clearFields()
 
     def click(x: Int, y: Int): Unit = {
+      checkInitialized(x, y)
+
       if(state == GameInProgress && visibilities((x, y)) == Closed) {
         moves += 1
         board((x, y)) match {
@@ -67,7 +69,7 @@ object Saper {
     }
 
     def markFlag(x: Int, y: Int): Unit = {
-      if(state == GameInProgress) {
+      if(initialized && state == GameInProgress) {
         visibilities((x, y)) match {
           case Closed =>
             visibilities += (x, y) -> Flagged
@@ -79,9 +81,29 @@ object Saper {
       }
     }
 
-    def dblClick(x: Int, y: Int): Unit = {
-      moves += 1
-      ??? // for porn
+    def bothClick(x: Int, y: Int): Unit = {
+      if(initialized && state == GameInProgress && visibilities((x, y)) == Opened) {
+        board((x, y)) match {
+          case Number(n) =>
+            val neighCoords = for {
+              px <- x - 1 to x + 1
+              py <- y - 1 to y + 1
+              if (px, py) != (x, y)
+              if (0 until config.width) contains px
+              if (0 until config.height) contains py
+            } yield (px, py)
+
+            val neighVisibilities = neighCoords.map(f => visibilities(f))
+            if(neighVisibilities.count(_ == Flagged) == n) {
+              neighCoords.foreach { case (x, y) =>
+                if(visibilities((x, y)) == Closed) {
+                  click(x, y)
+                }
+              }
+            }
+          case _ =>
+        }
+      }
     }
 
     def openNeighEmpties(x: Int, y: Int): Unit = {
@@ -109,11 +131,9 @@ object Saper {
       } yield !((board((x, y)) == Mine) ^ (visibilities((x, y)) == Flagged)))
         .forall(x => x)
 
-      val openedFieldsCondition: Boolean = (for {
-        x <- 0 until config.width
-        y <- 0 until config.height
-      } yield visibilities((x, y)) == Closed)
-        .filterNot(x => x).size == config.mines
+      lazy val minesCoords = board.filter(_._2 == Mine).keySet
+      lazy val closedCoords = visibilities.filter(_._2 == Closed).keySet
+      lazy val openedFieldsCondition: Boolean = minesCoords == closedCoords
 
       if(flagCondition || openedFieldsCondition) {
         state = Win(moves)
@@ -134,13 +154,32 @@ object Saper {
 
     private lazy val rand = new Random()
 
+    def checkInitialized(x: Int, y: Int): Unit = {
+      if(!initialized) {
+        initialized = true
+        do {
+          clearFields()
+          placeMines(config.mines)
+        } while (board((x, y)) != Empty)
+      }
+    }
+
+    def clearFields(): Unit = {
+      (0 until config.width).foreach { x =>
+        (0 until config.height).foreach { y =>
+          board += (x, y) -> Empty
+          visibilities += (x, y) -> Closed
+        }
+      }
+    }
+
     @tailrec
     private def placeMines(minesLeft: Int): Unit = minesLeft match {
       case 0 => ()
       case k =>
         val x = rand.nextInt(config.width)
         val y = rand.nextInt(config.height)
-        if(board((x,y)) == Empty) {
+        if(board((x,y)) != Mine) {
           board += (x, y) -> Mine
           placeNumbers(x, y)
           placeMines(k - 1)
