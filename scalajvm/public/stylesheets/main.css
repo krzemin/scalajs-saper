@@ -2,6 +2,10 @@
     width: 600px;
 }
 
+#game a {
+    font-family: monospace;
+}
+
 #visible-word {
     font-size: 40px;
     font-family: monospace;
