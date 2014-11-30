@@ -1,1 +1,1 @@
-web: scalajvm/target/universal/stage/bin/play-wisielec  -Dhttp.port=$PORT
+web: scalajvm/target/universal/stage/bin/play-saper  -Dhttp.port=$PORT
